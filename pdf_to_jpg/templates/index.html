@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF to JPG Converter</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: auto; }
+        input[type="file"], button {
+            display: block; margin: 20px 0; width: 100%;
+        }
+        #downloadLink { display: none; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Convert PDF to JPG</h2>
+        <form id="uploadForm">
+            <input type="file" name="file" accept="application/pdf" required>
+            <button type="submit">Convert</button>
+        </form>
+        <div id="result">
+            <h3>Download:</h3>
+           <button> <a id="downloadLink" href="#" download>Download Converted File</a></button>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const downloadLink = document.getElementById('downloadLink');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            const response = await fetch('/convert', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                downloadLink.href = url;
+                downloadLink.style.display = 'inline-block';
+
+                // Set filename based on response type
+                const contentType = response.headers.get("Content-Type");
+                downloadLink.download = contentType === "application/zip" ? "converted_images.zip" : "converted.jpg";
+            } else {
+                alert('Conversion failed!');
+            }
+        });
+    </script>
+</body>
+</html>
