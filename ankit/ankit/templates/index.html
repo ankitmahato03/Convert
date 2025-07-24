@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JPG to WEBP Converter</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: auto; }
+        input[type="file"], input[type="number"], button {
+            display: block; margin: 20px 0; width: 100%;
+        }
+        img { max-width: 100%; margin-top: 20px; }
+        #downloadBtn { display: none; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Convert JPG to WEBP</h2>
+        <form id="uploadForm">
+            <input type="file" name="file" accept="image/*" required>
+            <input type="number" name="quality" placeholder="Quality (default 80)" min="1" max="100">
+            <button type="submit">Convert</button>
+        </form>
+        <div id="result">
+            <h3>Converted Image:</h3>
+            <img id="convertedImage" src="" alt="Converted Image">
+            <a id="downloadBtn" href="#" download="converted.webp">Download Image</a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const resultImg = document.getElementById('convertedImage');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            const response = await fetch('/convert', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                resultImg.src = url;
+                downloadBtn.href = url;
+                downloadBtn.style.display = 'inline-block';
+            } else {
+                alert('Conversion failed!');
+            }
+        });
+    </script>
+</body>
+</html>
