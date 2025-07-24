@@ -1,25 +1,34 @@
-from flask import Flask, request, send_file, render_template
+from fastapi import FastAPI, File, UploadFile, Request
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pdf2image import convert_from_bytes
 from io import BytesIO
 from zipfile import ZipFile
+import traceback
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Mount templates directory
+templates = Jinja2Templates(directory="templates")
 
-@app.route('/convert', methods=['POST'])
-def convert_pdf_to_jpg():
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/convert")
+async def convert_pdf_to_jpg(file: UploadFile = File(...)):
     try:
-        file = request.files['file']
-        images = convert_from_bytes(file.read(), fmt='jpeg')
+        contents = await file.read()
+        images = convert_from_bytes(contents, fmt='jpeg')
 
         if len(images) == 1:
             img_io = BytesIO()
             images[0].save(img_io, format='JPEG')
             img_io.seek(0)
-            return send_file(img_io, mimetype='image/jpeg', download_name='converted.jpg')
+            return StreamingResponse(img_io, media_type="image/jpeg", headers={
+                "Content-Disposition": "attachment; filename=converted.jpg"
+            })
         else:
             zip_io = BytesIO()
             with ZipFile(zip_io, 'w') as zip_file:
@@ -29,12 +38,10 @@ def convert_pdf_to_jpg():
                     img_bytes.seek(0)
                     zip_file.writestr(f'page_{i+1}.jpg', img_bytes.read())
             zip_io.seek(0)
-            return send_file(zip_io, mimetype='application/zip', download_name='converted_images.zip')
+            return StreamingResponse(zip_io, media_type="application/zip", headers={
+                "Content-Disposition": "attachment; filename=converted_images.zip"
+            })
 
     except Exception as e:
-        import traceback
         print("Error:", traceback.format_exc())
-        return {'error': str(e)}, 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        return JSONResponse(status_code=500, content={"error": str(e)})
