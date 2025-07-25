@@ -1,56 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>PDF to JPG Converter</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .container { max-width: 600px; margin: auto; }
-        input[type="file"], button {
-            display: block; margin: 20px 0; width: 100%;
-        }
-        #downloadLink { display: none; margin-top: 20px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>PDF Tools</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f7f7f7;
+    }
+    h2 {
+      margin-top: 2rem;
+    }
+    form {
+      background: #fff;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type="file"], input[type="text"], input[type="number"] {
+      margin: 0.5rem 0;
+      padding: 0.4rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin-top: 0.5rem;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Convert PDF to JPG</h2>
-        <form id="uploadForm">
-            <input type="file" name="file" accept="application/pdf" required>
-            <button type="submit">Convert</button>
-        </form>
-        <div id="result">
-            <h3>Download:</h3>
-           <button> <a id="downloadLink" href="#" download>Download Converted File</a></button>
-        </div>
-    </div>
 
-    <script>
-        const form = document.getElementById('uploadForm');
-        const downloadLink = document.getElementById('downloadLink');
+  <h1>🛠️ PDF Utility Toolkit</h1>
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(form);
+  <!-- PDF to JPG -->
+  <form id="pdfToJpgForm">
+    <h2>📄 Convert PDF to JPG</h2>
+    <input type="file" name="file" accept="application/pdf" required>
+    <button type="submit">Convert</button>
+  </form>
 
-            const response = await fetch('/convert', {
-                method: 'POST',
-                body: formData
-            });
+  <!-- JPG to PDF -->
+  <form id="jpgToPdfForm">
+    <h2>🖼️ Convert JPG(s) to PDF</h2>
+    <input type="file" name="files" accept="image/jpeg, image/png" multiple required>
+    <button type="submit">Convert</button>
+  </form>
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                downloadLink.href = url;
-                downloadLink.style.display = 'inline-block';
+  <!-- Lock PDF -->
+  <form id="lockPdfForm">
+    <h2>🔒 Lock PDF</h2>
+    <input type="file" name="file" accept="application/pdf" required>
+    <input type="text" name="password" placeholder="Password" required>
+    <button type="submit">Lock</button>
+  </form>
 
-                // Set filename based on response type
-                const contentType = response.headers.get("Content-Type");
-                downloadLink.download = contentType === "application/zip" ? "converted_images.zip" : "converted.jpg";
-            } else {
-                alert('Conversion failed!');
-            }
+  <!-- Unlock PDF -->
+  <form id="unlockPdfForm">
+    <h2>🔓 Unlock PDF</h2>
+    <input type="file" name="file" accept="application/pdf" required>
+    <input type="text" name="password" placeholder="Password" required>
+    <button type="submit">Unlock</button>
+  </form>
+
+  <!-- Compress PDF -->
+  <form id="compressPdfForm">
+    <h2>📉 Compress PDF</h2>
+    <input type="file" name="file" accept="application/pdf" required>
+    <input type="number" name="compression_ratio" placeholder="Compression % (1-100)" min="1" max="100" required>
+    <button type="submit">Compress</button>
+  </form>
+
+  <script>
+    async function handleFormSubmit(formId, endpoint, isMultiple = false) {
+      const form = document.getElementById(formId);
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const queryParams = [];
+
+        // Handle query params (for lock/unlock/compress)
+        for (let [key, value] of formData.entries()) {
+          if (key !== 'file' && key !== 'files') {
+            queryParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+          }
+        }
+
+        const url = queryParams.length ? `${endpoint}?${queryParams.join("&")}` : endpoint;
+
+        const uploadKey = isMultiple ? 'files' : 'file';
+        const newForm = new FormData();
+        if (isMultiple) {
+          for (let file of formData.getAll('files')) newForm.append('files', file);
+        } else {
+          newForm.append('file', formData.get('file'));
+        }
+
+        const response = await fetch(url, {
+          method: "POST",
+          body: newForm,
         });
-    </script>
+
+        if (!response.ok) {
+          alert("Failed: " + (await response.text()));
+          return;
+        }
+
+        const blob = await response.blob();
+        const a = document.createElement("a");
+        a.href = window.URL.createObjectURL(blob);
+        a.download = response.headers.get("Content-Disposition")?.split("filename=")[1] || "download.pdf";
+        a.click();
+      });
+    }
+
+    handleFormSubmit("pdfToJpgForm", "/convert");
+    handleFormSubmit("jpgToPdfForm", "/convert-to-pdf", true);
+    handleFormSubmit("lockPdfForm", "/lock-pdf");
+    handleFormSubmit("unlockPdfForm", "/unlock-pdf");
+    handleFormSubmit("compressPdfForm", "/compress-pdf");
+  </script>
+
 </body>
 </html>

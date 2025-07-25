@@ -3,4 +3,7 @@ uvicorn
 pdf2image
 jinja2
 python-multipart
+PyPDF2
+PyMuPDF
+Pillow
 
